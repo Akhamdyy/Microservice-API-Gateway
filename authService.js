@@ -8,8 +8,17 @@ const bcrypt = require('bcryptjs');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use((req,res,next) =>{
+    req.time = new Date(Date.now()).toString();
+    console.log(req.method,req.hostname, req.path, req.time);
+    next();
+});
 
 let refreshTokens = [];
+
+app.get('/greet/hello', (req, res) => {
+    res.send('Hello, Welcome to SuperPay Authentication Service!');
+})
 
 app.post('/register', async(req, res) => {
     try {
@@ -30,8 +39,10 @@ app.post('/login', async(req, res) => {
     try {
         if(await bcrypt.compare(req.body.password, user.password)){
             const accessToken = generateAccessToken(user);
-            user.password = null;
-            const refreshToken = jwt.sign(user.toJSON(), process.env.REFRESH_TOKEN_SECRET);
+            let userData = {
+                username: user.username,
+            };
+            const refreshToken = jwt.sign(userData, process.env.REFRESH_TOKEN_SECRET, {expiresIn: '1d'});
             refreshTokens.push(refreshToken);
             res.json({accessToken: accessToken, refreshToken: refreshToken});
         } else {
@@ -43,7 +54,7 @@ app.post('/login', async(req, res) => {
     }
 })
 
-app.post('/token',(req, res) => {
+app.post('/refresh',(req, res) => {
     const refreshToken = req.body.token;
     if (refreshToken == null) {
         return res.sendStatus(401);
@@ -64,18 +75,18 @@ app.delete('/logout', (req, res) => {
 })
 
 function generateAccessToken(user) {
-    user.password = null;
-    let userData = JSON.stringify({
+    let userData = {
         username: user.username,
-    });
-    return jwt.sign(userData, process.env.ACCESS_TOKEN_SECRET);
+    };
+    return jwt.sign(userData, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '60s'});
 }
+
 
 mongoose.connect('mongodb+srv://admin:adminali@nodeapi.14eyy.mongodb.net/NodeAPI?retryWrites=true&w=majority&appName=NodeAPI')
 .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(4000, () => {
-        console.log('Auth Server is running on port 4000'); 
+    app.listen(3001, () => {
+        console.log('Auth Service API is running on port 3001'); 
     })
 }).catch((error) => {
     console.log(error);

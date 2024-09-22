@@ -2,15 +2,22 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const Product = require('./models/productModel');
-const User = require('./models/userModel');
 const app = express();
 const jwt = require('jsonwebtoken');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use((req,res,next) =>{
+    req.time = new Date(Date.now()).toString();
+    console.log(req.method,req.hostname, req.path, req.time);
+    next();
+});
 
+app.get('/greet', (req, res) => {
+    res.send('Hello, Welcome to SuperPay Product Manager!');
+})
 
-app.get('/products', authenticateToken, async(req, res) => {
+app.get('/products',authenticateToken , async(req, res) => {
     try {
         const products = await Product.find({})
         res.status(200).json(products);
@@ -82,11 +89,12 @@ function authenticateToken(req, res, next) {
     });
 }
 
+
 mongoose.connect('mongodb+srv://admin:adminali@nodeapi.14eyy.mongodb.net/NodeAPI?retryWrites=true&w=majority&appName=NodeAPI')
 .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(3000, () => {
-        console.log('Main API server is running on port 3000'); 
+    app.listen(3002, () => {
+        console.log('Product Service API is running on port 3002'); 
     })
 }).catch((error) => {
     console.log(error);
